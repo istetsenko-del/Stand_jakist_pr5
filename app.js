@@ -115,9 +115,7 @@ function update() {
  byId('progress').value=done;
  byId('progress-label').textContent=`${done} із 10 кроків · ${done*10} %`;
  byId('nav').innerHTML=steps.map((s,i)=>`<button type="button" data-step="${i}" ${state.parts.slice(0,i).some(p=>!p.done)?'disabled':''} ${i===state.current?'aria-current="step"':''}>${i+1}. ${esc(s.title)}${state.parts[i].done?' ✓':''}</button>`).join('');
- byId('report').disabled=done!==10||!state.name.trim()||!state.group.trim();
  byId('finish').hidden=done!==10&&!storageUnavailable;
- byId('retry').hidden=done!==10||sending||!!state.receipt||!sendError;
  byId('report-status').textContent=(sendError?'Не вдалося завершити роботу. Спробуйте ще раз або повідомте викладача.':
  done===10?'Усі 10 кроків виконано.':'')+
  (storageUnavailable?' Збереження чернетки у браузері недоступне.':'');
@@ -130,7 +128,9 @@ function render() {
  : `<input name="q${j}" type="text" inputmode="decimal" maxlength="24" required value="${esc(part.answers[j])}" ${lock}>`}</label><span class="feedback protected" id="feedback-${j}"></span></div>`).join('')}
  <label><span class="protected">${esc(s.note)}</span><textarea name="note" maxlength="1500" required ${part.done?'readonly':''}>${esc(part.note)}</textarea></label>
  <p id="result" class="protected" role="status">${part.done?`Крок завершено. Перша перевірка — ${part.first}/5.`:''}</p>
- <div class="actions">${part.done?(i<9?'<button type="button" id="next">Наступний крок</button>':'<a href="#finish">До звіту</a>'):'<button type="submit">Перевірити відповіді</button>'}</div></form>`;
+ <div class="actions">${part.done&&i<9?'<button type="button" id="next">Наступний крок</button>':
+ part.done&&(!sendError||sending||state.receipt)?'':
+ `<button type="submit">${i===9?'Перевірити результати':'Перевірити відповіді'}</button>`}</div></form>`;
  update();
 }
 function openStep(i){
@@ -156,7 +156,7 @@ byId('step').addEventListener('input',e=>{
 byId('step').addEventListener('submit',e=>{
  e.preventDefault();
  const p=state.parts[state.current], s=steps[state.current];
- if(p.done) return;
+ if(p.done){if(state.current===9&&sendError)void sendReport();return;}
  if(!p.note.trim()){byId('result').textContent='Запишіть коротке власне пояснення.';return;}
  if(state.current===9&&(!state.name.trim()||!state.group.trim())){
   byId('result').textContent='Для здавання роботи заповніть ПІБ і групу.';
@@ -231,32 +231,17 @@ async function sendReport(){
  if(sending||state.receipt||!state.parts.every(p=>p.done)||!state.name.trim()||!state.group.trim())return;
  const url=String(window.PR05_ICC_RECEIVER||'').trim();
  if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)){
-  sendError='Приймач звітів ще не підключено. Повідомте викладача.';update();return;
+  sendError='Приймач звітів ще не підключено. Повідомте викладача.';render();return;
  }
  if(location.protocol!=='https:'){
-  sendError='Для здавання відкрийте опублікований сайт GitHub Pages.';update();return;
+  sendError='Для здавання відкрийте опублікований сайт GitHub Pages.';render();return;
  }
  state.submission ||= makeSubmission();
  byId('name').readOnly=true;byId('group').readOnly=true;
- sending=true;sendError='';save();update();
+ sending=true;sendError='';save();render();
  try{await receive(url,state.submission);state.receipt=true;save();}
  catch{sendError='Підтвердження не надійшло. Перевірте інтернет і повторіть надсилання.';}
- finally{sending=false;update();}
+ finally{sending=false;render();}
 }
-byId('retry').addEventListener('click',()=>void sendReport());
-byId('report').addEventListener('click',()=>{
- if(byId('report').disabled)return;
- const total=state.parts.reduce((sum,p)=>sum+p.first,0);
- const body=steps.map((s,i)=>{
-  const p=state.parts[i];
-  const lines=s.qs.map((q,j)=>`<li>${esc(q.question)} <strong>${esc(q.choices?q.choices[Number(p.answers[j])]:p.answers[j])}</strong></li>`).join('');
-  return `<section><h2>${i+1}. ${esc(s.title)}</h2><p>Перша перевірка — ${p.first}/5.</p><ol>${lines}</ol><p><b>Спостереження</b></p><p class="note">${esc(p.note)}</p></section>`;
- }).join('');
- const html=`<!doctype html><html lang="uk"><meta charset="utf-8"><title>Звіт ПР05</title><style>body{max-width:850px;margin:2rem auto;padding:0 1rem;font:16px/1.5 system-ui;color:#17333b}section{border-top:1px solid #aaa}.note{white-space:pre-wrap}</style><h1>Звіт з практичної роботи №5</h1><p>Стандарти і якість у поліграфії · Робота з ICC-профілями</p><p>${esc(state.name)} · ${esc(state.group)} · ${new Date().toLocaleDateString('uk-UA')}</p><p>Перша перевірка — ${total}/50. Після виправлень — 50/50. Власні спостереження перевіряє викладач.</p>${body}</html>`;
- const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
- const a=document.createElement('a');a.href=url;
- a.download='ПР05_'+state.name.trim().replace(/[^\p{L}\p{N}-]+/gu,'_')+'.html';
- a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-});
 render();
 if(state.parts.every(p=>p.done))void sendReport();
