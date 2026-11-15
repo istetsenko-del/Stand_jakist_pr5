@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Практична №5 — Лабораторія кольору</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="drive-config.js"></script><script defer src="samples.js"></script><script defer src="app.js"></script>
+</head>
+<body>
+<aside class="protected"><p class="eyebrow">СТАНДАРТИ І ЯКІСТЬ У ПОЛІГРАФІЇ</p><h2>Лабораторія кольору</h2><progress id="progress" max="10" value="0"></progress><p id="progress-label"></p><nav id="nav" aria-label="Кроки роботи"></nav></aside>
+<main>
+<header class="protected"><p class="eyebrow">ПРАКТИЧНА РОБОТА №5 · 4 КУРС · 80 ХВ</p><h1>Робота з ICC-профілями та підготовка зображень</h1>
+<p class="lead">Підготуйте копію зображення для газетного друку, порівняйте її з оригіналом і поясніть, де колір може змінитися.</p>
+<p>Десять кроків по п’ять завдань. Використовуйте конспект лекції 7 і калькулятор. Власні спостереження та числові відповіді увійдуть до звіту. Прогрес зберігається у цьому браузері.</p></header>
+<details class="protected"><summary>Вихідні дані та інструкція з конвертації</summary>
+<p>Навчальне замовлення — кольорова вставка для газетного друку. Джерело — PNG 1200 × 800 пікселів, RGB, 8 біт на канал, вбудований sRGB. Цільовий профіль — WAN-IFRAnewspaper26v5.</p>
+<ol><li>Відкрийте PNG у Krita та збережіть вбудований профіль джерела.</li><li>У копії виберіть Image → Convert Image Color Space. Задайте CMYK/Alpha, 8 біт на канал, WAN-IFRAnewspaper26v5 і відносний колориметричний спосіб відтворення. Увімкніть компенсацію чорної точки, якщо параметр доступний. Потрібний профіль можна отримати у викладача або на сайті розробника.</li><li>Збережіть CMYK TIFF із вбудованим профілем. Відкрийте його повторно й перевірте модель, профіль та розміри.</li><li>Порівняйте копію з PNG в одному редакторі на тому самому моніторі й масштабі. Якщо редактор або профіль недоступний, використайте контрольний TIFF для аналізу й зазначте це у звіті.</li></ol>
+<div class="actions"><a href="test-srgb.png" download>Завантажити RGB PNG</a><a href="reference-cmyk.tif" download>Контрольний CMYK TIFF</a><a href="https://wan-ifra.org/wpf/printquality/" target="_blank" rel="noopener">Профіль WAN-IFRA</a></div>
+<img src="test-srgb.png" alt="Контрольні плашки A1–B4, сходинки тіней C1 і плавний градієнт C2"></details>
+<div class="identity"><label><span class="protected">ПІБ студента</span><input id="name" autocomplete="name" maxlength="120" required></label><label><span class="protected">Група</span><input id="group" maxlength="40" required></label></div>
+<section id="step"></section>
+<section class="submission" id="finish" hidden><h2 class="protected">Підсумок роботи</h2><p id="report-status" class="protected" role="status"></p><div class="actions"><button id="retry" type="button" hidden>Повторити</button><button id="report" type="button" disabled>Завантажити копію звіту</button></div></section>
+</main>
+</body></html>
