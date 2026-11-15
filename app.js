@@ -78,13 +78,21 @@ const stepFiveRevision = 2;
 const stepSixRevision = 2;
 const byId = id => document.getElementById(id);
 const esc = text => String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const fresh = () => ({name:'',group:'',current:0,parts:steps.map(() => ({answers:Array(5).fill(''),note:'',first:null,done:false}))});
+const fresh = () => ({name:'',group:'',current:0,visibilityStarted:false,hiddenTransitions:0,parts:steps.map(() => ({answers:Array(5).fill(''),note:'',first:null,wrongAnswers:0,done:false}))});
 let state=fresh(), storageUnavailable=false;
 let sending=false, sendError='';
 try {
  const existing=JSON.parse(localStorage.getItem(key));
  if (existing?.parts?.length===10 && existing.current>=0 && existing.current<10) state=existing;
 } catch { storageUnavailable=true; }
+state.hiddenTransitions ??= 0;
+state.visibilityStarted ??= state.parts.some(p=>p.first!==null||p.answers.some(Boolean)||p.note);
+for(const part of state.parts){
+ if(part.wrongAnswers===undefined){
+  part.wrongAnswers=part.first===null?0:5-part.first;
+  if(part.first!==null)state.partialMetrics=true;
+ }
+}
 if(state.stepFiveRevision!==stepFiveRevision&&!state.submission){
  const revised=state.parts[4];
  if(revised.done||revised.first!==null||revised.answers.some(Boolean)||revised.note){
@@ -151,6 +159,13 @@ byId('step').addEventListener('input',e=>{
  const p=state.parts[state.current], name=e.target.name;
  if(name==='note') p.note=e.target.value;
  else if(/^q[0-4]$/.test(name)) p.answers[Number(name.slice(1))]=e.target.value;
+ else return;
+ state.visibilityStarted=true;
+ save();
+});
+document.addEventListener('visibilitychange',()=>{
+ if(document.visibilityState!=='hidden'||!state.visibilityStarted||state.parts.every(p=>p.done))return;
+ state.hiddenTransitions++;
  save();
 });
 byId('step').addEventListener('submit',e=>{
@@ -164,6 +179,7 @@ byId('step').addEventListener('submit',e=>{
  }
  const correct=s.qs.map((q,i)=>isCorrect(q,p.answers[i]));
  const score=correct.filter(Boolean).length;
+ p.wrongAnswers+=5-score;
  if(p.first===null) p.first=score;
  p.done=score===5;save();
  if(p.done){
@@ -197,6 +213,11 @@ function makeSubmission(){
  return {
   id:crypto.randomUUID(),
   name:state.name.trim(),group:state.group.trim(),
+  metrics:{
+   wrongAnswers:state.parts.reduce((total,part)=>total+part.wrongAnswers,0),
+   hiddenTransitions:state.hiddenTransitions,
+   partial:!!state.partialMetrics
+  },
   sections:steps.map((s,i)=>{
    const p=state.parts[i];
    return {title:s.title,first:p.first,note:p.note,items:s.qs.map((q,j)=>({
